@@ -9,4 +9,5 @@ Wishlist
 -Makes reccomendations on times based on what the classes demand.
 -Gives you possible schedule layouts
 -Based on location (minimize time between buildings)
--Preferences for eating / when am I hungry? etc
+-Preferences for eating / when am I hungry? et
+-If you don't have enough time in the day to complete a task, push back lower priority tasks (like weekly things)
