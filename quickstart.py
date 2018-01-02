@@ -20,6 +20,8 @@ SCOPES = 'https://www.googleapis.com/auth/calendar' # limit to read/write only.
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Google Calendar API Python Quickstart'
 CALENDAR_ID = 'l28ku7sivedk160fdgf0ttnka0@group.calendar.google.com'
+SLEEP_TIME = {"hour" : 3, "minute" : 30, "second" : 0, "microsecond" : 0} # UTC format
+CLEAR_PRECISION = {"second" : 0, "microsecond" : 0}
 
 
 def get_credentials():
@@ -50,6 +52,26 @@ def get_credentials():
         print('Storing credentials to ' + credential_path)
     return credentials
 
+def get_sleep_time():
+    curr_time = datetime.datetime.utcnow()
+    print(curr_time)
+    sleep_time = curr_time.replace(**SLEEP_TIME)
+    sleep_time = sleep_time.replace(day=sleep_time.day+1) 
+    return sleep_time
+
+def remove_busy_times(service, now):
+    """Goes through each event on the calendar for the day and removes that time block"""
+    upper_bound = get_sleep_time().isoformat() + 'Z'
+    eventsResult = service.events().list( # creates an HttpRequest object
+        calendarId=CALENDAR_ID,
+        timeMin=now, timeMax=upper_bound, singleEvents=True,
+        orderBy='startTime').execute() #.execute() gets the response
+    events = eventsResult.get('items', []) # return empty if items doesn't exist.
+
+    for event in events:
+        start = event['start'].get('dateTime', event['start'].get('date')) # the DNE case is for all-day events
+        print(start, event['summary'])
+
 def main():
     """Shows basic usage of the Google Calendar API.
 
@@ -74,22 +96,26 @@ def main():
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http()) # adds credentials headers to http object
     service = discovery.build('calendar', 'v3', http=http) # creates a discovery service object
-
     now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
-    print('Getting the upcoming 10 events...')
-    service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
-    eventsResult = service.events().list( # creates an HttpRequest object
-        calendarId=CALENDAR_ID,
-        timeMin=now, maxResults=10, singleEvents=True,
-        orderBy='startTime').execute() #.execute() gets the response
-    
-    events = eventsResult.get('items', []) # return empty if items doesn't exist.
 
-    if not events:
-        print('No upcoming events found.')
-    for event in events:
-        start = event['start'].get('dateTime', event['start'].get('date')) # the DNE case is for all-day events
-        print(start, event['summary'])
+    remove_busy_times(service, now)
+
+    # inserting an event
+    # service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
+
+    # reading the next 10 events
+    # print('Getting the upcoming 10 events...')
+    # eventsResult = service.events().list( # creates an HttpRequest object
+    #     calendarId=CALENDAR_ID,
+    #     timeMin=now, maxResults=10, singleEvents=True,
+    #     orderBy='startTime').execute() #.execute() gets the response
+    # events = eventsResult.get('items', []) # return empty if items doesn't exist.
+
+    # if not events:
+    #     print('No upcoming events found.')
+    # for event in events:
+    #     start = event['start'].get('dateTime', event['start'].get('date')) # the DNE case is for all-day events
+    #     print(start, event['summary'])
 
 
 if __name__ == '__main__':
