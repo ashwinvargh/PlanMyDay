@@ -7,6 +7,7 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 import datetime
+from dateutil import parser
 
 try: # here for older python versions (argsparse imported on 2.7 and onwards)
     import argparse
@@ -54,14 +55,14 @@ def get_credentials():
 
 def get_sleep_time():
     curr_time = datetime.datetime.utcnow()
-    print(curr_time)
     sleep_time = curr_time.replace(**SLEEP_TIME)
-    sleep_time = sleep_time.replace(day=sleep_time.day+1) 
+    sleep_time = sleep_time.replace(day=sleep_time.day+1)  #UTC format it's next day
     return sleep_time
 
-def remove_busy_times(service, now):
+def get_free_time(service, now):
     """Goes through each event on the calendar for the day and removes that time block"""
     upper_bound = get_sleep_time().isoformat() + 'Z'
+    interval = get_sleep_time() - datetime.datetime.utcnow()
     eventsResult = service.events().list( # creates an HttpRequest object
         calendarId=CALENDAR_ID,
         timeMin=now, timeMax=upper_bound, singleEvents=True,
@@ -69,16 +70,23 @@ def remove_busy_times(service, now):
     events = eventsResult.get('items', []) # return empty if items doesn't exist.
 
     for event in events:
-        start = event['start'].get('dateTime', event['start'].get('date')) # the DNE case is for all-day events
-        print(start, event['summary'])
+        start = event['start'].get('dateTime', "12:00") # ignores all-day events
+        end = event['end'].get('dateTime', "12:00")
+        event_start = parser.parse(start)
+        event_end =parser.parse(end)
+        interval = interval - (event_end - event_start)
 
+    return interval
+def get_tasks():
+    tasks = []
+    task = raw_input("What do you need to do? (Hit ENTER if that's it.)")
+    tasks.append(task)
+    while (task != ""):
+        task = raw_input("What do you need to do? (Hit ENTER if that's it.)")
+        if (task != ""):
+            tasks.append(task)
+    return tasks
 def main():
-    """Shows basic usage of the Google Calendar API.
-
-    Creates a Google Calendar API service object and outputs a list of the next
-    10 events on the user's calendar.
-    """
-
     event = {
         'summary': 'Google I/O 2018',
         'location': '800 Howard St., San Francisco, CA 94103',
@@ -98,7 +106,11 @@ def main():
     service = discovery.build('calendar', 'v3', http=http) # creates a discovery service object
     now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
 
-    remove_busy_times(service, now)
+    free_time = get_free_time(service, now)
+    tasks = get_tasks()
+    print("Here are your tasks" + str(tasks))
+    print("Free time: " + str(free_time))
+    print("Time alloted for each task: " + str((free_time/len(tasks))))
 
     # inserting an event
     # service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
