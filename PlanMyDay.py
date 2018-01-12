@@ -56,6 +56,7 @@ def get_credentials():
 def get_sleep_time():
     curr_time = datetime.datetime.utcnow()
     sleep_time = curr_time.replace(**SLEEP_TIME)
+    # Add an if statemnet is beyond 7 PM 
     sleep_time = sleep_time.replace(day=sleep_time.day+1)  #UTC format it's next day
     return sleep_time
 
@@ -76,16 +77,22 @@ def get_free_time(service, now):
         event_end =parser.parse(end)
         interval = interval - (event_end - event_start)
 
+
     return interval
 def get_tasks():
-    tasks = []
-    task = raw_input("What do you need to do? (Hit ENTER if that's it.)")
-    tasks.append(task)
+    tasks = {}
+    task = raw_input("What do you need to do? (Hit ENTER if that's it.) ")
+    tasks[task] = 0
     while (task != ""):
-        task = raw_input("What do you need to do? (Hit ENTER if that's it.)")
+        task = raw_input("What do you need to do? (Hit ENTER if that's it.) ")
         if (task != ""):
-            tasks.append(task)
+            tasks[task] = 0
     return tasks
+def update_times(tasks):
+    for key in tasks:
+        time = input("How much time would you like to spend on " + key + " (minutes) ? ")
+        task_duration = datetime.timedelta(minutes=time)
+        tasks[key] = task_duration
 def main():
     event = {
         'summary': 'Google I/O 2018',
@@ -108,9 +115,12 @@ def main():
 
     free_time = get_free_time(service, now)
     tasks = get_tasks()
-    print("Here are your tasks" + str(tasks))
-    print("Free time: " + str(free_time))
-    print("Time alloted for each task: " + str((free_time/len(tasks))))
+    update_times(tasks)
+
+    for key in tasks:
+        free_time -= tasks[key]
+        
+    print("Scheduling tasks... ")
 
     # inserting an event
     # service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
